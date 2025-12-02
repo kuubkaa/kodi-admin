@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kodi Admin 2.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #141414; color: #e5e5e5; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        .poster-card { transition: transform 0.3s; cursor: pointer; position: relative; }
+        .poster-card:hover { transform: scale(1.05); z-index: 10; }
+        .modal { background-color: rgba(0,0,0,0.85); }
+        .episode-row:hover { background-color: #333; }
+        .has-url { border-left: 4px solid #10B981; background-color: #064E3B; }
+        .no-url { border-left: 4px solid #6B7280; opacity: 0.7; }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #141414; }
+        ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #888; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <nav class="flex items-center justify-between px-8 py-4 bg-black sticky top-0 z-50 border-b border-gray-800">
+        <div class="flex items-center gap-6">
+            <h1 class="text-red-600 text-3xl font-bold tracking-tighter cursor-pointer" onclick="renderHome()">NETFLIX<span class="text-white text-sm font-normal ml-2 opacity-50">MANAGER</span></h1>
+            <div class="hidden md:flex gap-4 text-sm font-medium">
+                <button onclick="switchTab('movies')" id="tab-movies" class="text-white hover:text-gray-300 transition">Filmy</button>
+                <button onclick="switchTab('series')" id="tab-series" class="text-gray-400 hover:text-gray-300 transition">Seriály</button>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="relative">
+                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                <input type="text" id="local-search" placeholder="Hledat v knihovně..." onkeyup="filterLocalLibrary()" 
+                       class="bg-black border border-gray-600 text-white text-sm rounded-sm pl-10 pr-4 py-2 focus:outline-none focus:border-white w-64 transition">
+            </div>
+            <button onclick="openAddModal()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 font-bold rounded flex items-center gap-2">
+                <i class="fas fa-plus"></i> <span class="hidden md:inline">Přidat</span>
+            </button>
+            <button onclick="logout()" class="text-gray-400 hover:text-white"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+    </nav>
+
+    <div id="login-screen" class="hidden fixed inset-0 flex items-center justify-center bg-black z-50">
+        <div class="bg-gray-900 p-8 rounded max-w-md w-full text-center border border-gray-700">
+            <h2 class="text-2xl font-bold mb-4">Přihlášení</h2>
+            <p class="text-gray-400 text-sm mb-6">Zadej svůj GitHub Token pro přístup k databázi.</p>
+            <input type="password" id="api-token-input" placeholder="ghp_..." class="w-full p-3 bg-gray-800 rounded mb-4 text-white focus:outline-none focus:border-red-600 border border-gray-700">
+            <button onclick="saveToken()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded">Vstoupit</button>
+        </div>
+    </div>
+
+    <main class="flex-grow p-8">
+        <div id="loading" class="hidden text-center py-20">
+            <i class="fas fa-circle-notch fa-spin text-4xl text-red-600"></i>
+            <p class="mt-4 text-gray-400">Načítám knihovnu...</p>
+        </div>
+
+        <div id="content-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6"></div>
+    </main>
+
+    <div id="add-modal" class="hidden fixed inset-0 modal z-50 flex items-start justify-center overflow-y-auto pt-10">
+        <div class="bg-[#181818] w-full max-w-4xl rounded-lg shadow-2xl relative min-h-[500px] mb-10">
+            <button onclick="closeModal('add-modal')" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl"><i class="fas fa-times"></i></button>
+            
+            <div class="p-8 border-b border-gray-700">
+                <h2 class="text-2xl font-bold mb-4">Přidat nový titul</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="tmdb-search-input" placeholder="Zadej název filmu nebo seriálu (např. Matrix)..." 
+                           class="w-full p-4 bg-black border border-gray-600 text-white text-lg focus:outline-none focus:border-white"
+                           onkeydown="if(event.key==='Enter') searchTMDB()">
+                    <button onclick="searchTMDB()" class="bg-red-600 px-6 font-bold text-white hover:bg-red-700">HLEDAT</button>
+                </div>
+            </div>
+
+            <div id="tmdb-results" class="p-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+                </div>
+        </div>
+    </div>
+
+    <div id="movie-modal" class="hidden fixed inset-0 modal z-50 flex items-center justify-center">
+        <div class="bg-[#181818] w-full max-w-2xl rounded-lg shadow-2xl relative flex overflow-hidden">
+            <img id="edit-movie-poster" class="w-1/3 object-cover hidden md:block" src="" alt="">
+            <div class="w-full md:w-2/3 p-8">
+                <button onclick="closeModal('movie-modal')" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+                <h2 id="edit-movie-title" class="text-2xl font-bold mb-2"></h2>
+                <p id="edit-movie-year" class="text-gray-400 text-sm mb-4"></p>
+                
+                <label class="block text-sm text-gray-400 mb-1">URL Videa (MP4/MKV/Stream)</label>
+                <input type="text" id="edit-movie-url" class="w-full p-3 bg-black border border-gray-600 text-white mb-4 focus:border-red-600 focus:outline-none">
+                
+                <div class="flex justify-between mt-8">
+                    <button onclick="deleteMovie()" class="text-gray-500 hover:text-red-500 text-sm">Smazat z knihovny</button>
+                    <button onclick="saveMovie()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded">ULOŽIT</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="series-modal" class="hidden fixed inset-0 modal z-50 flex items-center justify-center">
+        <div class="bg-[#181818] w-full max-w-5xl h-[90vh] rounded-lg shadow-2xl relative flex flex-col md:flex-row overflow-hidden">
+            <div class="w-full md:w-1/4 bg-black p-6 overflow-y-auto border-r border-gray-800">
+                <img id="series-poster" class="w-full rounded mb-4" src="">
+                <h2 id="series-title" class="text-xl font-bold mb-2"></h2>
+                <button onclick="deleteSeries()" class="text-red-500 text-xs hover:underline mt-4">Odstranit celý seriál</button>
+                
+                <h3 class="text-gray-400 uppercase text-xs font-bold mt-8 mb-2 tracking-wider">Série</h3>
+                <div id="seasons-list" class="space-y-1"></div>
+            </div>
+
+            <div class="w-full md:w-3/4 bg-[#181818] flex flex-col">
+                <div class="p-6 border-b border-gray-800 flex justify-between items-center">
+                    <h3 id="current-season-title" class="text-xl font-bold">Vyber sérii</h3>
+                    <button onclick="closeModal('series-modal')" class="text-gray-400 hover:text-white text-xl"><i class="fas fa-times"></i></button>
+                </div>
+                <div id="episodes-list" class="flex-grow overflow-y-auto p-6 space-y-2">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="episode-editor" class="hidden fixed inset-0 bg-black bg-opacity-90 z-[60] flex items-center justify-center">
+        <div class="bg-gray-900 p-6 rounded-lg w-full max-w-lg border border-gray-700">
+            <h3 id="ep-editor-title" class="font-bold text-lg mb-4"></h3>
+            <p id="ep-editor-overview" class="text-xs text-gray-400 mb-4 line-clamp-3"></p>
+            <input type="text" id="ep-editor-url" placeholder="http://..." class="w-full p-3 bg-black border border-gray-600 text-white mb-4">
+            <div class="flex justify-end gap-3">
+                <button onclick="document.getElementById('episode-editor').classList.add('hidden')" class="px-4 py-2 text-gray-400">Zrušit</button>
+                <button onclick="saveEpisodeUrl()" class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded">Potvrdit</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- KONFIGURACE ---
+        const GIST_ID = "d7434b5623a31f8e4a297f9a98dbadce"; 
+        const TMDB_KEY = "b6b6486f8ff1b4303079c386c3f19963";
+        const FILENAME = "database.json";
+
+        // --- STAV ---
+        let db = { movies: [], series: [] };
+        let currentTab = 'movies';
+        let tempSeriesId = null; 
+        let currentSeasonData = null;
+        let editingEpisode = null; // { s_idx, ep_idx, tmdb_data }
+
+        // --- START ---
+        function init() {
+            const token = localStorage.getItem("kodi_gh_token");
+            if (!token) {
+                document.getElementById("login-screen").classList.remove("hidden");
+            } else {
+                document.getElementById("login-screen").classList.add("hidden");
+                loadLibrary();
+            }
+        }
+
+        function saveToken() {
+            const t = document.getElementById("api-token-input").value.trim();
+            if (t) { localStorage.setItem("kodi_gh_token", t); init(); }
+        }
+        function logout() { localStorage.removeItem("kodi_gh_token"); location.reload(); }
+
+        // --- GIST OPERACE ---
+        async function loadLibrary() {
+            document.getElementById("loading").classList.remove("hidden");
+            const token = localStorage.getItem("kodi_gh_token");
+            try {
+                // Přidáme timestamp pro obejití cache
+                const res = await fetch(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, {
+                    headers: { "Authorization": `token ${token}` }
+                });
+                const json = await res.json();
+                if(json.files[FILENAME]) {
+                    db = JSON.parse(json.files[FILENAME].content);
+                    if(!db.movies) db.movies = [];
+                    if(!db.series) db.series = [];
+                    renderDashboard();
+                } else {
+                    alert("Chyba: Soubor database.json nenalezen!");
+                }
+            } catch (e) { console.error(e); alert("Nelze načíst data."); }
+            document.getElementById("loading").classList.add("hidden");
+        }
+
+        async function saveLibrary() {
+            const token = localStorage.getItem("kodi_gh_token");
+            db.updated_at = Date.now();
+            
+            // Indikace ukládání
+            const saveBtn = document.querySelector(".fa-plus").parentElement;
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = "<i class='fas fa-sync fa-spin'></i> Ukládám...";
+
+            try {
+                await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                    method: "PATCH",
+                    headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ files: { [FILENAME]: { content: JSON.stringify(db, null, 2) } } })
+                });
+                renderDashboard();
+            } catch(e) { alert("Chyba při ukládání!"); }
+            saveBtn.innerHTML = originalText;
+        }
+
+        // --- UI FUNKCE ---
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById("tab-movies").className = tab === 'movies' ? "text-white font-bold border-b-2 border-red-600" : "text-gray-400 hover:text-white";
+            document.getElementById("tab-series").className = tab === 'series' ? "text-white font-bold border-b-2 border-red-600" : "text-gray-400 hover:text-white";
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            const grid = document.getElementById("content-grid");
+            grid.innerHTML = "";
+            const list = currentTab === 'movies' ? db.movies : db.series;
+            
+            // Řazení: Nově přidané první
+            const sorted = [...list].reverse(); 
+
+            sorted.forEach(item => {
+                const imgUrl = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Poster';
+                const div = document.createElement("div");
+                div.className = "poster-card group";
+                div.onclick = () => currentTab === 'movies' ? openMovieEditor(item.id) : openSeriesManager(item.id);
+                div.innerHTML = `
+                    <img src="${imgUrl}" class="rounded-md w-full h-auto object-cover shadow-lg group-hover:opacity-50 transition">
+                    <div class="hidden group-hover:flex absolute inset-0 flex-col items-center justify-center text-center p-2">
+                        <span class="font-bold text-sm mb-2">${item.title || item.name}</span>
+                        <i class="fas fa-pen text-red-600 text-2xl"></i>
+                    </div>
+                `;
+                // Pro vyhledávání
+                div.dataset.title = (item.title || item.name).toLowerCase();
+                grid.appendChild(div);
+            });
+            filterLocalLibrary(); // Aplikuj filtr, pokud je něco v hledání
+        }
+
+        function filterLocalLibrary() {
+            const q = document.getElementById("local-search").value.toLowerCase();
+            const cards = document.querySelectorAll(".poster-card");
+            cards.forEach(card => {
+                card.style.display = card.dataset.title.includes(q) ? "block" : "none";
+            });
+        }
+
+        // --- TMDB HLEDÁNÍ ---
+        function openAddModal() {
+            document.getElementById("add-modal").classList.remove("hidden");
+            document.getElementById("tmdb-search-input").focus();
+            document.getElementById("tmdb-results").innerHTML = "";
+        }
+        function closeModal(id) { document.getElementById(id).classList.add("hidden"); }
+
+        async function searchTMDB() {
+            const q = document.getElementById("tmdb-search-input").value;
+            if(!q) return;
+            const type = currentTab === 'movies' ? 'movie' : 'tv';
+            
+            const res = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=${TMDB_KEY}&language=cs-CZ&query=${encodeURIComponent(q)}`);
+            const data = await res.json();
+            
+            const container = document.getElementById("tmdb-results");
+            container.innerHTML = "";
+            
+            data.results.forEach(item => {
+                const poster = item.poster_path ? `https://image.tmdb.org/t/p/w300${item.poster_path}` : null;
+                if(!poster) return; // Neukazovat bez obrazku
+
+                const el = document.createElement("div");
+                el.className = "bg-gray-800 rounded cursor-pointer hover:bg-gray-700 p-2 transition";
+                el.onclick = () => addToLibrary(item);
+                el.innerHTML = `
+                    <img src="${poster}" class="w-full rounded mb-2">
+                    <div class="text-xs font-bold">${item.title || item.name}</div>
+                    <div class="text-xs text-gray-500">${(item.release_date || item.first_air_date || "").substr(0,4)}</div>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        // --- PŘIDÁVÁNÍ DO KNIHOVNY ---
+        async function addToLibrary(tmdbItem) {
+            // Kontrola duplicit
+            const list = currentTab === 'movies' ? db.movies : db.series;
+            if (list.find(x => x.tmdb_id === tmdbItem.id)) {
+                alert("Tento titul už v knihovně máš!");
+                return;
+            }
+
+            // Získat detaily (potřebujeme žánry a IMDb ID)
+            const type = currentTab === 'movies' ? 'movie' : 'tv';
+            const detRes = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbItem.id}?api_key=${TMDB_KEY}&language=cs-CZ`);
+            const details = await detRes.json();
+
+            // Společný objekt
+            const newItem = {
+                id: Date.now(), // Interní ID
+                tmdb_id: tmdbItem.id,
+                title: details.title || details.name,
+                original_title: details.original_title || details.original_name,
+                poster_path: details.poster_path,
+                backdrop_path: details.backdrop_path,
+                overview: details.overview,
+                genres: details.genres.map(g => g.name),
+                year: (details.release_date || details.first_air_date || "").substr(0,4),
+                rating: details.vote_average
+            };
+
+            if (currentTab === 'movies') {
+                newItem.url = ""; // Zatím prázdné
+                db.movies.push(newItem);
+                closeModal('add-modal');
+                saveLibrary(); // Uložit strukturu
+                openMovieEditor(newItem.id); // Otevřít rovnou editor pro vložení URL
+            } else {
+                // Pro seriály
+                newItem.seasons_count = details.number_of_seasons;
+                newItem.episodes_data = []; // Zde budeme ukládat URL epizod
+                db.series.push(newItem);
+                closeModal('add-modal');
+                saveLibrary();
+                openSeriesManager(newItem.id);
+            }
+        }
+
+        // --- EDITOR FILMŮ ---
+        let editingMovieId = null;
+        function openMovieEditor(id) {
+            const movie = db.movies.find(m => m.id === id);
+            if(!movie) return;
+            editingMovieId = id;
+            
+            document.getElementById("edit-movie-title").innerText = movie.title;
+            document.getElementById("edit-movie-year").innerText = `${movie.year} • ${movie.genres.join(", ")}`;
+            document.getElementById("edit-movie-poster").src = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+            document.getElementById("edit-movie-url").value = movie.url || "";
+            
+            document.getElementById("movie-modal").classList.remove("hidden");
+        }
+
+        function saveMovie() {
+            const movie = db.movies.find(m => m.id === editingMovieId);
+            if(movie) {
+                movie.url = document.getElementById("edit-movie-url").value.trim();
+                saveLibrary();
+                closeModal('movie-modal');
+            }
+        }
+
+        function deleteMovie() {
+            if(confirm("Opravdu odstranit tento film?")) {
+                db.movies = db.movies.filter(m => m.id !== editingMovieId);
+                saveLibrary();
+                closeModal('movie-modal');
+            }
+        }
+
+        // --- MANAGER SERIÁLŮ (SLOŽITÉ) ---
+        async function openSeriesManager(id) {
+            tempSeriesId = id;
+            const series = db.series.find(s => s.id === id);
+            
+            document.getElementById("series-title").innerText = series.title;
+            document.getElementById("series-poster").src = `https://image.tmdb.org/t/p/w300${series.poster_path}`;
+            
+            // Vygenerovat seznam sérií
+            const seasonList = document.getElementById("seasons-list");
+            seasonList.innerHTML = "";
+            document.getElementById("episodes-list").innerHTML = "<div class='text-gray-500 text-center mt-10'>Vyber sérii vlevo</div>";
+
+            // Získat info o sériích z TMDB (znovu, pro jistotu počtu)
+            const res = await fetch(`https://api.themoviedb.org/3/tv/${series.tmdb_id}?api_key=${TMDB_KEY}&language=cs-CZ`);
+            const tmdbShow = await res.json();
+
+            tmdbShow.seasons.forEach(season => {
+                if(season.season_number === 0 && season.episode_count === 0) return; // Přeskočit prázdné specials
+                
+                const btn = document.createElement("button");
+                btn.className = "w-full text-left px-4 py-3 bg-gray-900 hover:bg-gray-800 rounded mb-1 text-sm font-bold flex justify-between";
+                btn.innerHTML = `<span>${season.name}</span> <span class="text-xs text-gray-500">${season.episode_count} dílů</span>`;
+                btn.onclick = () => loadEpisodes(series.tmdb_id, season.season_number);
+                seasonList.appendChild(btn);
+            });
+
+            document.getElementById("series-modal").classList.remove("hidden");
+        }
+
+        async function loadEpisodes(tmdbId, seasonNum) {
+            document.getElementById("episodes-list").innerHTML = "<i class='fas fa-spinner fa-spin'></i> Načítám epizody...";
+            
+            // Stáhnout metadata epizod z TMDB
+            const res = await fetch(`https://api.themoviedb.org/3/tv/${tmdbId}/season/${seasonNum}?api_key=${TMDB_KEY}&language=cs-CZ`);
+            const data = await res.json();
+            
+            const listDiv = document.getElementById("episodes-list");
+            listDiv.innerHTML = "";
+            document.getElementById("current-season-title").innerText = data.name;
+
+            const series = db.series.find(s => s.id === tempSeriesId);
+
+            data.episodes.forEach(ep => {
+                // Zkusit najít, jestli už máme uloženou URL pro tuto epizodu
+                // Ukládáme jako: "S1E1"
+                const epKey = `S${seasonNum}E${ep.episode_number}`;
+                const savedEp = series.episodes_data ? series.episodes_data.find(x => x.key === epKey) : null;
+                const hasUrl = savedEp && savedEp.url;
+
+                const row = document.createElement("div");
+                row.className = `episode-row p-4 rounded flex justify-between items-center cursor-pointer transition ${hasUrl ? 'has-url' : 'no-url bg-gray-900'}`;
+                row.onclick = () => openEpisodeEditor(seasonNum, ep, savedEp ? savedEp.url : "");
+
+                row.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <span class="text-gray-400 font-mono text-lg w-8">${ep.episode_number}</span>
+                        <div>
+                            <div class="font-bold text-sm">${ep.name}</div>
+                            <div class="text-xs text-gray-500 line-clamp-1">${ep.overview || "Bez popisu"}</div>
+                        </div>
+                    </div>
+                    <i class="fas ${hasUrl ? 'fa-check text-green-400' : 'fa-plus text-gray-500'}"></i>
+                `;
+                listDiv.appendChild(row);
+            });
+        }
+
+        function openEpisodeEditor(seasonNum, tmdbEp, currentUrl) {
+            editingEpisode = { season: seasonNum, number: tmdbEp.episode_number, name: tmdbEp.name };
+            
+            document.getElementById("ep-editor-title").innerText = `${editingEpisode.season}x${editingEpisode.number} - ${editingEpisode.name}`;
+            document.getElementById("ep-editor-overview").innerText = tmdbEp.overview;
+            document.getElementById("ep-editor-url").value = currentUrl;
+            document.getElementById("episode-editor").classList.remove("hidden");
+            document.getElementById("ep-editor-url").focus();
+        }
+
+        function saveEpisodeUrl() {
+            const url = document.getElementById("ep-editor-url").value.trim();
+            const series = db.series.find(s => s.id === tempSeriesId);
+            if(!series.episodes_data) series.episodes_data = [];
+
+            const epKey = `S${editingEpisode.season}E${editingEpisode.number}`;
+            
+            // Odstranit starý záznam
+            series.episodes_data = series.episodes_data.filter(x => x.key !== epKey);
+
+            // Pokud URL není prázdná, přidat nový
+            if(url) {
+                series.episodes_data.push({
+                    key: epKey,
+                    season: editingEpisode.season,
+                    episode: editingEpisode.number,
+                    title: editingEpisode.name,
+                    url: url
+                });
+            }
+
+            saveLibrary(); // Uložit do Gistu
+            document.getElementById("episode-editor").classList.add("hidden");
+            
+            // Refresh seznamu epizod (znovu načíst, aby se přebarvilo)
+            loadEpisodes(series.tmdb_id, editingEpisode.season);
+        }
+
+        function deleteSeries() {
+            if(confirm("Opravdu smazat celý seriál a všechny odkazy?")) {
+                db.series = db.series.filter(s => s.id !== tempSeriesId);
+                saveLibrary();
+                closeModal('series-modal');
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
