@@ -3,27 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kodi Admin 3.0</title>
+    <title>Kodi Admin 3.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         body { background-color: #141414; color: #e5e5e5; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
-        
-        /* Grid View Styling */
         .poster-card { transition: transform 0.3s; cursor: pointer; position: relative; }
         .poster-card:hover { transform: scale(1.05); z-index: 10; }
-        .status-badge { position: absolute; top: 5px; right: 5px; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; }
-        
-        /* List View Styling */
-        .list-row { transition: background 0.2s; border-bottom: 1px solid #333; }
         .list-row:hover { background-color: #262626; }
-        
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #141414; }
         ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
-        
-        /* Modals */
         .modal { background-color: rgba(0,0,0,0.85); }
     </style>
 </head>
@@ -32,20 +22,17 @@
     <nav class="flex flex-col md:flex-row items-center justify-between px-6 py-4 bg-black sticky top-0 z-50 border-b border-gray-800 gap-4">
         <div class="flex items-center gap-6 w-full md:w-auto justify-between">
             <h1 class="text-red-600 text-2xl font-bold tracking-tighter cursor-pointer" onclick="location.reload()">NETFLIX<span class="text-white text-sm font-normal ml-2 opacity-50">MANAGER</span></h1>
-            
             <div class="flex bg-gray-800 rounded p-1">
-                <button onclick="switchView('grid')" id="btn-grid" class="px-3 py-1 rounded hover:bg-gray-700 transition"><i class="fas fa-th-large"></i></button>
-                <button onclick="switchView('list')" id="btn-list" class="px-3 py-1 rounded hover:bg-gray-700 transition"><i class="fas fa-list"></i></button>
+                <button onclick="switchView('grid')" id="btn-grid" class="px-3 py-1 rounded transition"><i class="fas fa-th-large"></i></button>
+                <button onclick="switchView('list')" id="btn-list" class="px-3 py-1 rounded transition"><i class="fas fa-list"></i></button>
             </div>
         </div>
-
         <div class="flex gap-4 text-sm font-medium overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
             <button onclick="switchTab('movies')" id="tab-movies" class="nav-tab">Filmy</button>
             <button onclick="switchTab('series')" id="tab-series" class="nav-tab">Seriály</button>
             <button onclick="switchTab('documentaries')" id="tab-documentaries" class="nav-tab">Dokumenty</button>
             <button onclick="switchTab('concerts')" id="tab-concerts" class="nav-tab">Koncerty</button>
         </div>
-
         <div class="flex items-center gap-4">
             <input type="text" id="local-search" placeholder="Hledat..." onkeyup="renderDashboard()" 
                    class="bg-black border border-gray-600 text-white text-sm rounded pl-3 pr-3 py-1 focus:outline-none focus:border-white w-40">
@@ -65,10 +52,7 @@
     </div>
 
     <main class="flex-grow p-4 md:p-8">
-        <div id="loading" class="hidden text-center py-20">
-            <i class="fas fa-circle-notch fa-spin text-4xl text-red-600"></i>
-        </div>
-        
+        <div id="loading" class="hidden text-center py-20"><i class="fas fa-circle-notch fa-spin text-4xl text-red-600"></i></div>
         <div id="dashboard-container"></div>
     </main>
 
@@ -77,9 +61,9 @@
             <button onclick="closeModal('add-modal')" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl"><i class="fas fa-times"></i></button>
             <div class="p-6 border-b border-gray-700">
                 <h2 class="text-2xl font-bold mb-2">Hledat na TMDB</h2>
-                <p class="text-xs text-gray-500 mb-4">Přidávám do sekce: <span id="add-target-label" class="font-bold text-red-500 uppercase"></span></p>
+                <p class="text-xs text-gray-500 mb-4">Sekce: <span id="add-target-label" class="font-bold text-red-500 uppercase"></span></p>
                 <div class="flex gap-2">
-                    <input type="text" id="tmdb-search-input" placeholder="Název filmu/seriálu..." class="w-full p-3 bg-black border border-gray-600 text-white focus:outline-none focus:border-white" onkeydown="if(event.key==='Enter') searchTMDB()">
+                    <input type="text" id="tmdb-search-input" placeholder="Název..." class="w-full p-3 bg-black border border-gray-600 text-white focus:outline-none focus:border-white" onkeydown="if(event.key==='Enter') searchTMDB()">
                     <button onclick="searchTMDB()" class="bg-red-600 px-6 font-bold text-white hover:bg-red-700">HLEDAT</button>
                 </div>
             </div>
@@ -99,10 +83,10 @@
                     <span id="edit-movie-runtime"></span>
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-xs uppercase text-gray-500 font-bold mb-1">Kvalita obrazu</label>
-                    <select id="edit-movie-quality" class="bg-gray-900 border border-gray-700 text-white p-2 rounded w-full md:w-1/2">
-                        <option value="">Neznámá</option>
+                <div class="mb-4 bg-gray-900 p-3 rounded border border-gray-800">
+                    <label class="block text-xs uppercase text-gray-500 font-bold mb-1">Výchozí kvalita (pro přehled)</label>
+                    <select id="edit-movie-quality" class="bg-black border border-gray-700 text-white p-2 rounded w-full text-sm">
+                        <option value="">-- Neurčeno --</option>
                         <option value="4K">4K / UHD</option>
                         <option value="1080p">1080p / FullHD</option>
                         <option value="720p">720p / HD</option>
@@ -111,11 +95,11 @@
                 </div>
                 
                 <div class="flex justify-between items-center mb-2 mt-2">
-                    <label class="block text-xs uppercase text-gray-500 font-bold">Odkazy / Verze</label>
-                    <button onclick="addVersionRow()" class="text-xs bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded text-white"><i class="fas fa-plus"></i></button>
+                    <label class="block text-xs uppercase text-gray-500 font-bold">Verze souborů</label>
+                    <button onclick="addVersionRow()" class="text-xs bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded text-white flex items-center gap-1"><i class="fas fa-plus"></i> Přidat verzi</button>
                 </div>
 
-                <div id="movie-versions-container" class="space-y-2 flex-grow overflow-y-auto max-h-[200px] mb-4"></div>
+                <div id="movie-versions-container" class="space-y-2 flex-grow overflow-y-auto max-h-[250px] mb-4 pr-1"></div>
                 
                 <div class="flex justify-between pt-4 border-t border-gray-800 mt-auto">
                     <button onclick="deleteItem()" class="text-red-900 hover:text-red-500 text-sm">Smazat</button>
@@ -146,7 +130,6 @@
     <div id="episode-editor" class="hidden fixed inset-0 bg-black bg-opacity-95 z-[60] flex items-center justify-center">
         <div class="bg-gray-900 p-6 rounded-lg w-full max-w-md border border-gray-600">
             <h3 id="ep-editor-title" class="font-bold text-lg mb-2"></h3>
-            
             <div class="mb-3">
                 <label class="text-xs text-gray-500 uppercase">Kvalita</label>
                 <select id="ep-editor-quality" class="w-full bg-black border border-gray-700 text-white p-2 rounded text-sm">
@@ -157,12 +140,10 @@
                     <option value="SD">SD</option>
                 </select>
             </div>
-
             <div class="mb-4">
                 <label class="text-xs text-gray-500 uppercase">URL Adresa</label>
                 <input type="text" id="ep-editor-url" class="w-full p-2 bg-black border border-gray-700 text-white rounded text-sm">
             </div>
-
             <div class="flex justify-end gap-2">
                 <button onclick="document.getElementById('episode-editor').classList.add('hidden')" class="px-3 py-1 text-gray-400 text-sm">Zrušit</button>
                 <button onclick="saveEpisode()" class="px-4 py-1 bg-green-600 hover:bg-green-700 text-white font-bold rounded text-sm">Uložit</button>
@@ -171,86 +152,52 @@
     </div>
 
     <script>
-        // --- KONFIGURACE ---
         const GIST_ID = "d7434b5623a31f8e4a297f9a98dbadce"; 
         const TMDB_KEY = "b6b6486f8ff1b4303079c386c3f19963";
         const FILENAME = "database.json";
 
-        // --- STAV ---
         let db = { movies: [], series: [], documentaries: [], concerts: [] };
-        let currentTab = 'movies'; // 'movies', 'series', 'documentaries', 'concerts'
+        let currentTab = 'movies';
         let viewMode = localStorage.getItem('viewMode') || 'grid';
         let currentEditingId = null;
         let tempSeriesId = null;
         let editingEpisode = null;
 
-        // --- INIT ---
         function init() {
             const token = localStorage.getItem("kodi_gh_token");
             if (!token) document.getElementById("login-screen").classList.remove("hidden");
-            else {
-                document.getElementById("login-screen").classList.add("hidden");
-                loadLibrary();
-            }
-            updateViewButtons();
-            switchTab('movies'); // Výchozí
+            else { document.getElementById("login-screen").classList.add("hidden"); loadLibrary(); }
+            updateViewButtons(); switchTab('movies');
         }
-        function saveToken() {
-            const t = document.getElementById("api-token-input").value.trim();
-            if (t) { localStorage.setItem("kodi_gh_token", t); init(); }
-        }
+        function saveToken() { const t = document.getElementById("api-token-input").value.trim(); if (t) { localStorage.setItem("kodi_gh_token", t); init(); } }
         function logout() { localStorage.removeItem("kodi_gh_token"); location.reload(); }
 
-        // --- UI LOGIKA ---
         function switchTab(tab) {
             currentTab = tab;
             document.querySelectorAll('.nav-tab').forEach(b => b.className = "text-gray-400 hover:text-white px-2 py-1 transition cursor-pointer");
             document.getElementById(`tab-${tab}`).className = "text-white font-bold border-b-2 border-red-600 px-2 py-1 cursor-pointer";
             renderDashboard();
         }
-
-        function switchView(mode) {
-            viewMode = mode;
-            localStorage.setItem('viewMode', mode);
-            updateViewButtons();
-            renderDashboard();
-        }
-
+        function switchView(mode) { viewMode = mode; localStorage.setItem('viewMode', mode); updateViewButtons(); renderDashboard(); }
         function updateViewButtons() {
             document.getElementById('btn-grid').className = `px-3 py-1 rounded transition ${viewMode==='grid' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`;
             document.getElementById('btn-list').className = `px-3 py-1 rounded transition ${viewMode==='list' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`;
         }
-
         function closeModal(id) { document.getElementById(id).classList.add("hidden"); }
         function openAddModal() {
             document.getElementById("add-modal").classList.remove("hidden");
-            document.getElementById("add-target-label").innerText = getTabLabel(currentTab);
+            document.getElementById("add-target-label").innerText = currentTab;
             document.getElementById("tmdb-results").innerHTML = "";
             document.getElementById("tmdb-search-input").focus();
         }
 
-        function getTabLabel(tab) {
-            if(tab === 'movies') return "Film";
-            if(tab === 'series') return "Seriál";
-            if(tab === 'documentaries') return "Dokument";
-            if(tab === 'concerts') return "Koncert";
-            return "";
-        }
-
-        // --- RENDEROVÁNÍ ---
         function renderDashboard() {
             const container = document.getElementById("dashboard-container");
             container.innerHTML = "";
             const query = document.getElementById("local-search").value.toLowerCase();
-            
-            // Získání správného seznamu, pojistka proti undefined
-            let list = db[currentTab] || [];
-            
-            // Filtr
+            const list = db[currentTab] || [];
             const filtered = list.filter(item => (item.title || item.name || "").toLowerCase().includes(query)).reverse();
-
-            if (viewMode === 'grid') renderGrid(container, filtered);
-            else renderList(container, filtered);
+            if (viewMode === 'grid') renderGrid(container, filtered); else renderList(container, filtered);
         }
 
         function renderGrid(container, items) {
@@ -258,135 +205,76 @@
             items.forEach(item => {
                 const img = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://via.placeholder.com/300x450';
                 const isReady = checkReady(item);
-                
                 const div = document.createElement("div");
                 div.className = "poster-card group rounded-lg overflow-hidden bg-[#181818] shadow-lg";
                 div.onclick = () => openEditor(item.id);
                 
-                // Badge kvality nebo stavu
-                let badgeHTML = "";
-                if(item.quality) badgeHTML = `<div class="absolute top-2 right-2 bg-yellow-600 text-white text-[10px] px-2 py-0.5 rounded font-bold shadow">${item.quality}</div>`;
-                else if(isReady) badgeHTML = `<div class="absolute top-2 right-2 bg-green-600 text-white text-[10px] px-2 py-0.5 rounded font-bold shadow"><i class="fas fa-check"></i></div>`;
+                let badge = "";
+                if(item.quality) badge = `<div class="absolute top-2 right-2 bg-yellow-600 text-white text-[10px] px-2 py-0.5 rounded font-bold shadow">${item.quality}</div>`;
+                else if(isReady) badge = `<div class="absolute top-2 right-2 bg-green-600 text-white text-[10px] px-2 py-0.5 rounded font-bold shadow"><i class="fas fa-check"></i></div>`;
 
-                div.innerHTML = `
-                    <div class="relative aspect-[2/3]">
-                        <img src="${img}" class="w-full h-full object-cover group-hover:opacity-40 transition">
-                        ${badgeHTML}
-                        <div class="hidden group-hover:flex absolute inset-0 flex-col items-center justify-center">
-                            <i class="fas fa-pen text-white text-3xl drop-shadow-lg"></i>
-                        </div>
-                    </div>
-                    <div class="p-3">
-                        <h3 class="font-bold text-sm truncate text-white">${item.title || item.name}</h3>
-                        <div class="flex justify-between text-xs text-gray-500 mt-1">
-                            <span>${item.year || ""}</span>
-                            <span>${item.runtime ? item.runtime + ' min' : ''}</span>
-                        </div>
-                    </div>
-                `;
+                div.innerHTML = `<div class="relative aspect-[2/3]"><img src="${img}" class="w-full h-full object-cover group-hover:opacity-40 transition">${badge}<div class="hidden group-hover:flex absolute inset-0 flex-col items-center justify-center"><i class="fas fa-pen text-white text-3xl drop-shadow-lg"></i></div></div><div class="p-3"><h3 class="font-bold text-sm truncate text-white">${item.title || item.name}</h3><div class="flex justify-between text-xs text-gray-500 mt-1"><span>${item.year || ""}</span><span>${item.runtime ? item.runtime + ' min' : ''}</span></div></div>`;
                 container.appendChild(div);
             });
         }
 
         function renderList(container, items) {
             container.className = "flex flex-col gap-1";
-            
-            // Header
             const head = document.createElement("div");
             head.className = "flex text-xs uppercase text-gray-500 font-bold px-4 py-2 bg-black";
-            head.innerHTML = `
-                <div class="w-12">Img</div>
-                <div class="flex-grow">Název</div>
-                <div class="w-16 text-center">Rok</div>
-                <div class="w-20 text-center">Délka</div>
-                <div class="w-20 text-center">Kvalita</div>
-                <div class="w-10 text-center">Stav</div>
-            `;
+            head.innerHTML = `<div class="w-12">Img</div><div class="flex-grow">Název</div><div class="w-16 text-center">Rok</div><div class="w-20 text-center">Délka</div><div class="w-20 text-center">Kvalita</div><div class="w-10 text-center">Stav</div>`;
             container.appendChild(head);
-
             items.forEach(item => {
                 const img = item.poster_path ? `https://image.tmdb.org/t/p/w92${item.poster_path}` : '';
                 const isReady = checkReady(item);
-
                 const div = document.createElement("div");
                 div.className = "list-row flex items-center px-4 py-2 cursor-pointer";
                 div.onclick = () => openEditor(item.id);
-                div.innerHTML = `
-                    <div class="w-12"><img src="${img}" class="h-8 w-6 object-cover rounded bg-gray-800"></div>
-                    <div class="flex-grow font-bold text-sm text-gray-200">${item.title || item.name}</div>
-                    <div class="w-16 text-center text-xs text-gray-500">${item.year || "-"}</div>
-                    <div class="w-20 text-center text-xs text-gray-500">${item.runtime ? item.runtime + 'm' : '-'}</div>
-                    <div class="w-20 text-center text-xs font-mono text-yellow-500">${item.quality || "-"}</div>
-                    <div class="w-10 text-center text-xs">
-                        ${isReady ? '<i class="fas fa-check text-green-500"></i>' : '<i class="fas fa-circle text-gray-700 text-[8px]"></i>'}
-                    </div>
-                `;
+                div.innerHTML = `<div class="w-12"><img src="${img}" class="h-8 w-6 object-cover rounded bg-gray-800"></div><div class="flex-grow font-bold text-sm text-gray-200">${item.title || item.name}</div><div class="w-16 text-center text-xs text-gray-500">${item.year || "-"}</div><div class="w-20 text-center text-xs text-gray-500">${item.runtime ? item.runtime + 'm' : '-'}</div><div class="w-20 text-center text-xs font-mono text-yellow-500">${item.quality || "-"}</div><div class="w-10 text-center text-xs">${isReady ? '<i class="fas fa-check text-green-500"></i>' : '<i class="fas fa-circle text-gray-700 text-[8px]"></i>'}</div>`;
                 container.appendChild(div);
             });
         }
-
         function checkReady(item) {
             if (currentTab === 'series') return item.episodes_data && item.episodes_data.length > 0;
             return (item.versions && item.versions.length > 0) || (item.url);
         }
 
-        // --- DATA OPERACE ---
         async function loadLibrary() {
             document.getElementById("loading").classList.remove("hidden");
             try {
-                const res = await fetch(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, {
-                    headers: { "Authorization": `token ${localStorage.getItem("kodi_gh_token")}` }
-                });
+                const res = await fetch(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, { headers: { "Authorization": `token ${localStorage.getItem("kodi_gh_token")}` } });
                 const json = await res.json();
                 if(json.files[FILENAME]) {
                     db = JSON.parse(json.files[FILENAME].content);
-                    // Migrace/Pojistka pro nové pole
-                    if(!db.movies) db.movies = [];
-                    if(!db.series) db.series = [];
-                    if(!db.documentaries) db.documentaries = [];
-                    if(!db.concerts) db.concerts = [];
+                    if(!db.movies) db.movies=[]; if(!db.series) db.series=[]; if(!db.documentaries) db.documentaries=[]; if(!db.concerts) db.concerts=[];
                     renderDashboard();
                 }
-            } catch (e) { console.error(e); alert("Chyba načítání."); }
+            } catch (e) { alert("Chyba načítání."); }
             document.getElementById("loading").classList.add("hidden");
         }
-
         async function saveLibrary() {
             db.updated_at = Date.now();
-            const token = localStorage.getItem("kodi_gh_token");
             try {
                 await fetch(`https://api.github.com/gists/${GIST_ID}`, {
                     method: "PATCH",
-                    headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+                    headers: { "Authorization": `token ${localStorage.getItem("kodi_gh_token")}`, "Content-Type": "application/json" },
                     body: JSON.stringify({ files: { [FILENAME]: { content: JSON.stringify(db, null, 2) } } })
                 });
                 renderDashboard();
             } catch(e) { alert("Chyba ukládání!"); }
         }
 
-        // --- PŘIDÁNÍ Z TMDB ---
         async function searchTMDB() {
-            const q = document.getElementById("tmdb-search-input").value;
-            if(!q) return;
-            // Mapování Tab -> TMDB typ
+            const q = document.getElementById("tmdb-search-input").value; if(!q) return;
             const type = (currentTab === 'series') ? 'tv' : 'movie';
-            
             const res = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=${TMDB_KEY}&language=cs-CZ&query=${encodeURIComponent(q)}`);
             const data = await res.json();
-            
-            const cont = document.getElementById("tmdb-results");
-            cont.innerHTML = "";
-            
+            const cont = document.getElementById("tmdb-results"); cont.innerHTML = "";
             data.results.forEach(item => {
                 if(!item.poster_path) return;
-                const el = document.createElement("div");
-                el.className = "bg-gray-900 rounded cursor-pointer hover:bg-gray-800 p-2 transition";
+                const el = document.createElement("div"); el.className = "bg-gray-900 rounded cursor-pointer hover:bg-gray-800 p-2 transition";
                 el.onclick = () => addToLibrary(item);
-                el.innerHTML = `
-                    <img src="https://image.tmdb.org/t/p/w200${item.poster_path}" class="w-full rounded mb-2">
-                    <div class="text-xs font-bold truncate">${item.title || item.name}</div>
-                    <div class="text-[10px] text-gray-500">${(item.release_date || item.first_air_date || "").substr(0,4)}</div>
-                `;
+                el.innerHTML = `<img src="https://image.tmdb.org/t/p/w200${item.poster_path}" class="w-full rounded mb-2"><div class="text-xs font-bold truncate">${item.title || item.name}</div><div class="text-[10px] text-gray-500">${(item.release_date || item.first_air_date || "").substr(0,4)}</div>`;
                 cont.appendChild(el);
             });
         }
@@ -394,204 +282,125 @@
         async function addToLibrary(tmdbItem) {
             const list = db[currentTab];
             if(list.find(x => x.tmdb_id === tmdbItem.id)) { alert("Už to tu máš!"); return; }
-
             const type = (currentTab === 'series') ? 'tv' : 'movie';
-            const detRes = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbItem.id}?api_key=${TMDB_KEY}&language=cs-CZ`);
-            const details = await detRes.json();
-
+            const res = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbItem.id}?api_key=${TMDB_KEY}&language=cs-CZ`);
+            const det = await res.json();
             const newItem = {
-                id: Date.now(),
-                tmdb_id: tmdbItem.id,
-                title: details.title || details.name,
-                original_title: details.original_title || details.original_name,
-                poster_path: details.poster_path,
-                backdrop_path: details.backdrop_path,
-                overview: details.overview,
-                genres: details.genres.map(g => g.name),
-                year: (details.release_date || details.first_air_date || "").substr(0,4),
-                rating: details.vote_average
+                id: Date.now(), tmdb_id: tmdbItem.id, title: det.title || det.name, original_title: det.original_title || det.original_name,
+                poster_path: det.poster_path, backdrop_path: det.backdrop_path, overview: det.overview,
+                genres: det.genres.map(g => g.name), year: (det.release_date || det.first_air_date || "").substr(0,4), rating: det.vote_average
             };
-
-            // Specifika pro Movie-like (Film, Koncert, Dokument)
-            if (currentTab !== 'series') {
-                newItem.runtime = details.runtime || 0;
-                newItem.quality = ""; // Prázdné = neznámé
-                newItem.versions = [];
-            } else {
-                // Specifika pro Seriály
-                newItem.seasons_count = details.number_of_seasons;
-                newItem.episodes_data = [];
-            }
-
-            list.push(newItem);
-            closeModal('add-modal');
-            saveLibrary();
-            openEditor(newItem.id);
+            if (currentTab !== 'series') { newItem.runtime = det.runtime || 0; newItem.quality = ""; newItem.versions = []; }
+            else { newItem.seasons_count = det.number_of_seasons; newItem.episodes_data = []; }
+            list.push(newItem); closeModal('add-modal'); saveLibrary(); openEditor(newItem.id);
         }
 
-        // --- EDITOR (ROZCESTNÍK) ---
-        function openEditor(id) {
-            currentEditingId = id;
-            if (currentTab === 'series') openSeriesManager(id);
-            else openMovieEditor(id);
-        }
+        function openEditor(id) { currentEditingId = id; if (currentTab === 'series') openSeriesManager(id); else openMovieEditor(id); }
 
-        // --- EDITOR FILM/DOC/KONCERT ---
         function openMovieEditor(id) {
-            const item = db[currentTab].find(x => x.id === id);
-            if(!item) return;
-
+            const item = db[currentTab].find(x => x.id === id); if(!item) return;
             document.getElementById("edit-movie-title").innerText = item.title;
             document.getElementById("edit-movie-year").innerText = item.year;
             document.getElementById("edit-movie-runtime").innerText = item.runtime ? `${item.runtime} min` : '';
             document.getElementById("edit-movie-poster").src = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
             document.getElementById("edit-movie-quality").value = item.quality || "";
-
-            const cont = document.getElementById("movie-versions-container");
-            cont.innerHTML = "";
             
-            // Kompatibilita se starou URL
+            const cont = document.getElementById("movie-versions-container"); cont.innerHTML = "";
             let versions = item.versions || [];
-            if(versions.length === 0 && item.url) versions.push({ name: "Hlavní verze", url: item.url });
-            if(versions.length === 0) versions.push({ name: "Hlavní verze", url: "" });
-
-            versions.forEach(v => addVersionRow(v.name, v.url));
+            if(versions.length === 0 && item.url) versions.push({ name: "Hlavní verze", url: item.url, quality: item.quality || "" });
+            
+            versions.forEach(v => addVersionRow(v.name, v.url, v.quality));
             document.getElementById("movie-modal").classList.remove("hidden");
         }
 
-        function addVersionRow(name="Verze", url="") {
+        function addVersionRow(name="Verze", url="", quality="") {
             const div = document.createElement("div");
-            div.className = "version-row flex gap-2 items-center bg-gray-900 p-2 rounded";
+            div.className = "version-row flex gap-2 items-center bg-gray-900 p-2 rounded border border-gray-800";
+            // Přidán SELECT pro kvalitu verze
             div.innerHTML = `
-                <input type="text" class="ver-name bg-black border border-gray-700 text-white text-xs px-2 py-1 rounded w-1/3" value="${name}" placeholder="Název">
-                <input type="text" class="ver-url bg-black border border-gray-700 text-white text-xs px-2 py-1 rounded w-2/3" value="${url}" placeholder="URL">
-                <button onclick="this.parentElement.remove()" class="text-gray-500 hover:text-red-500"><i class="fas fa-trash"></i></button>
+                <div class="flex-grow flex flex-col gap-1">
+                    <div class="flex gap-2">
+                        <input type="text" class="ver-name bg-black border border-gray-700 text-white text-xs px-2 py-1 rounded w-3/5" value="${name}" placeholder="Název (např. Director's Cut)">
+                        <select class="ver-quality bg-black border border-gray-700 text-white text-xs px-1 py-1 rounded w-2/5">
+                            <option value="" ${quality===""?'selected':''}>--</option>
+                            <option value="4K" ${quality==="4K"?'selected':''}>4K</option>
+                            <option value="1080p" ${quality==="1080p"?'selected':''}>1080p</option>
+                            <option value="720p" ${quality==="720p"?'selected':''}>720p</option>
+                            <option value="SD" ${quality==="SD"?'selected':''}>SD</option>
+                        </select>
+                    </div>
+                    <input type="text" class="ver-url bg-black border border-gray-700 text-white text-xs px-2 py-1 rounded w-full" value="${url}" placeholder="URL adresa">
+                </div>
+                <button onclick="this.closest('.version-row').remove()" class="text-gray-500 hover:text-red-500 px-2"><i class="fas fa-trash"></i></button>
             `;
             document.getElementById("movie-versions-container").appendChild(div);
         }
 
         function saveMovie() {
-            const item = db[currentTab].find(x => x.id === currentEditingId);
-            if(!item) return;
-
-            // Ulož kvalitu
+            const item = db[currentTab].find(x => x.id === currentEditingId); if(!item) return;
             item.quality = document.getElementById("edit-movie-quality").value;
-
-            // Ulož verze
+            
             const rows = document.querySelectorAll("#movie-versions-container .version-row");
             item.versions = [];
             rows.forEach(r => {
-                const n = r.querySelector(".ver-name").value;
-                const u = r.querySelector(".ver-url").value;
-                if(u) item.versions.push({ name: n, url: u });
+                const n = r.querySelector(".ver-name").value.trim();
+                const u = r.querySelector(".ver-url").value.trim();
+                const q = r.querySelector(".ver-quality").value;
+                if(u) item.versions.push({ name: n || "Verze", url: u, quality: q });
             });
-            delete item.url; // Cleanup old
-
-            saveLibrary();
-            closeModal('movie-modal');
+            delete item.url; 
+            saveLibrary(); closeModal('movie-modal');
         }
 
-        // --- EDITOR SERIÁLŮ ---
         async function openSeriesManager(id) {
-            tempSeriesId = id;
-            const s = db.series.find(x => x.id === id);
+            tempSeriesId = id; const s = db.series.find(x => x.id === id);
             document.getElementById("series-title").innerText = s.title;
             document.getElementById("series-poster").src = `https://image.tmdb.org/t/p/w300${s.poster_path}`;
-            
-            const slist = document.getElementById("seasons-list");
-            slist.innerHTML = "Načítám...";
-            
+            const slist = document.getElementById("seasons-list"); slist.innerHTML = "Načítám...";
             const res = await fetch(`https://api.themoviedb.org/3/tv/${s.tmdb_id}?api_key=${TMDB_KEY}&language=cs-CZ`);
-            const tmdbS = await res.json();
-            slist.innerHTML = "";
-
+            const tmdbS = await res.json(); slist.innerHTML = "";
             tmdbS.seasons.forEach(sn => {
                 if(sn.season_number === 0 && sn.episode_count === 0) return;
-                const btn = document.createElement("button");
-                btn.className = "w-full text-left px-3 py-2 bg-gray-900 hover:bg-gray-800 rounded mb-1 text-xs font-bold flex justify-between";
+                const btn = document.createElement("button"); btn.className = "w-full text-left px-3 py-2 bg-gray-900 hover:bg-gray-800 rounded mb-1 text-xs font-bold flex justify-between";
                 btn.innerHTML = `<span>${sn.name}</span> <span class="text-gray-500">${sn.episode_count}</span>`;
                 btn.onclick = () => loadEpisodes(s.tmdb_id, sn.season_number);
                 slist.appendChild(btn);
             });
-            document.getElementById("episodes-list").innerHTML = "<div class='text-gray-500 text-center mt-10'>Vyber sérii vlevo</div>";
-            document.getElementById("series-modal").classList.remove("hidden");
+            document.getElementById("episodes-list").innerHTML = ""; document.getElementById("series-modal").classList.remove("hidden");
         }
-
         async function loadEpisodes(tmdbId, sNum) {
-            const list = document.getElementById("episodes-list");
-            list.innerHTML = "Načítám...";
+            const list = document.getElementById("episodes-list"); list.innerHTML = "Načítám...";
             const res = await fetch(`https://api.themoviedb.org/3/tv/${tmdbId}/season/${sNum}?api_key=${TMDB_KEY}&language=cs-CZ`);
-            const data = await res.json();
-            
-            list.innerHTML = "";
-            document.getElementById("current-season-title").innerText = data.name;
-            
+            const data = await res.json(); list.innerHTML = ""; document.getElementById("current-season-title").innerText = data.name;
             const series = db.series.find(x => x.id === tempSeriesId);
-
             data.episodes.forEach(ep => {
                 const key = `S${sNum}E${ep.episode_number}`;
                 const saved = series.episodes_data ? series.episodes_data.find(x => x.key === key) : null;
                 const hasUrl = saved && saved.url;
-
-                const row = document.createElement("div");
-                row.className = `p-3 rounded flex justify-between items-center cursor-pointer mb-1 border-l-4 ${hasUrl ? 'border-green-600 bg-green-900 bg-opacity-20' : 'border-gray-600 bg-gray-900'}`;
+                const row = document.createElement("div"); row.className = `p-3 rounded flex justify-between items-center cursor-pointer mb-1 border-l-4 ${hasUrl ? 'border-green-600 bg-green-900 bg-opacity-20' : 'border-gray-600 bg-gray-900'}`;
                 row.onclick = () => openEpisodeEditor(sNum, ep, saved);
-
-                let qualityBadge = (saved && saved.quality) ? `<span class="text-[10px] bg-yellow-600 px-1 rounded ml-2 text-white">${saved.quality}</span>` : '';
-
-                row.innerHTML = `
-                    <div class="flex items-center gap-3 overflow-hidden">
-                        <span class="text-gray-400 font-mono text-sm w-6">${ep.episode_number}</span>
-                        <div class="truncate">
-                            <div class="font-bold text-sm text-gray-200 truncate">${ep.name} ${qualityBadge}</div>
-                        </div>
-                    </div>
-                    <i class="fas ${hasUrl ? 'fa-pen text-green-500' : 'fa-plus text-gray-500'} text-xs"></i>
-                `;
+                let qBadge = (saved && saved.quality) ? `<span class="text-[10px] bg-yellow-600 px-1 rounded ml-2 text-white">${saved.quality}</span>` : '';
+                row.innerHTML = `<div class="flex items-center gap-3 overflow-hidden"><span class="text-gray-400 font-mono text-sm w-6">${ep.episode_number}</span><div class="truncate"><div class="font-bold text-sm text-gray-200 truncate">${ep.name} ${qBadge}</div></div></div><i class="fas ${hasUrl ? 'fa-pen text-green-500' : 'fa-plus text-gray-500'} text-xs"></i>`;
                 list.appendChild(row);
             });
         }
-
-        function openEpisodeEditor(sNum, tmdbEp, savedData) {
+        function openEpisodeEditor(sNum, tmdbEp, saved) {
             editingEpisode = { s: sNum, ep: tmdbEp.episode_number, title: tmdbEp.name };
             document.getElementById("ep-editor-title").innerText = `${sNum}x${tmdbEp.episode_number} ${tmdbEp.name}`;
-            document.getElementById("ep-editor-url").value = savedData ? savedData.url : "";
-            document.getElementById("ep-editor-quality").value = (savedData && savedData.quality) ? savedData.quality : "";
-            
+            document.getElementById("ep-editor-url").value = saved ? saved.url : "";
+            document.getElementById("ep-editor-quality").value = (saved && saved.quality) ? saved.quality : "";
             document.getElementById("episode-editor").classList.remove("hidden");
         }
-
         function saveEpisode() {
-            const url = document.getElementById("ep-editor-url").value.trim();
-            const qual = document.getElementById("ep-editor-quality").value;
+            const url = document.getElementById("ep-editor-url").value.trim(); const qual = document.getElementById("ep-editor-quality").value;
             const series = db.series.find(x => x.id === tempSeriesId);
-            
             const key = `S${editingEpisode.s}E${editingEpisode.ep}`;
             if(!series.episodes_data) series.episodes_data = [];
             series.episodes_data = series.episodes_data.filter(x => x.key !== key);
-
-            if(url) {
-                series.episodes_data.push({
-                    key: key,
-                    season: editingEpisode.s,
-                    episode: editingEpisode.ep,
-                    title: editingEpisode.title,
-                    url: url,
-                    quality: qual 
-                });
-            }
-            saveLibrary();
-            document.getElementById("episode-editor").classList.add("hidden");
-            loadEpisodes(series.tmdb_id, editingEpisode.s);
+            if(url) series.episodes_data.push({ key: key, season: editingEpisode.s, episode: editingEpisode.ep, title: editingEpisode.title, url: url, quality: qual });
+            saveLibrary(); document.getElementById("episode-editor").classList.add("hidden"); loadEpisodes(series.tmdb_id, editingEpisode.s);
         }
-
-        function deleteItem() {
-            if(!confirm("Opravdu smazat?")) return;
-            db[currentTab] = db[currentTab].filter(x => x.id !== currentEditingId);
-            saveLibrary();
-            closeModal('movie-modal');
-            closeModal('series-modal');
-        }
+        function deleteItem() { if(!confirm("Opravdu smazat?")) return; db[currentTab] = db[currentTab].filter(x => x.id !== currentEditingId); saveLibrary(); closeModal('movie-modal'); closeModal('series-modal'); }
 
         init();
     </script>
