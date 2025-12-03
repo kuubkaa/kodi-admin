@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kodi Admin 2.0</title>
+    <title>Kodi Admin 2.1 - Extended Editions</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -19,6 +19,10 @@
         ::-webkit-scrollbar-track { background: #141414; }
         ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #888; }
+        
+        /* Version inputs styling */
+        .version-row { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -81,20 +85,26 @@
         </div>
     </div>
 
-    <div id="movie-modal" class="hidden fixed inset-0 modal z-50 flex items-center justify-center">
-        <div class="bg-[#181818] w-full max-w-2xl rounded-lg shadow-2xl relative flex overflow-hidden">
-            <img id="edit-movie-poster" class="w-1/3 object-cover hidden md:block" src="" alt="">
+    <div id="movie-modal" class="hidden fixed inset-0 modal z-50 flex items-center justify-center overflow-y-auto">
+        <div class="bg-[#181818] w-full max-w-3xl rounded-lg shadow-2xl relative flex flex-col md:flex-row overflow-hidden my-10">
+            <img id="edit-movie-poster" class="w-full md:w-1/3 object-cover hidden md:block" src="" alt="">
             <div class="w-full md:w-2/3 p-8">
                 <button onclick="closeModal('movie-modal')" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+                
                 <h2 id="edit-movie-title" class="text-2xl font-bold mb-2"></h2>
-                <p id="edit-movie-year" class="text-gray-400 text-sm mb-4"></p>
+                <p id="edit-movie-year" class="text-gray-400 text-sm mb-6"></p>
                 
-                <label class="block text-sm text-gray-400 mb-1">URL Videa (MP4/MKV/Stream)</label>
-                <input type="text" id="edit-movie-url" class="w-full p-3 bg-black border border-gray-600 text-white mb-4 focus:border-red-600 focus:outline-none">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="block text-sm text-gray-400 uppercase font-bold tracking-wider">Verze filmu a odkazy</label>
+                    <button onclick="addVersionRow()" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-white"><i class="fas fa-plus"></i> Přidat verzi</button>
+                </div>
+
+                <div id="movie-versions-container" class="space-y-3 max-h-[400px] overflow-y-auto pr-2 mb-6">
+                    </div>
                 
-                <div class="flex justify-between mt-8">
+                <div class="flex justify-between mt-8 pt-4 border-t border-gray-800">
                     <button onclick="deleteMovie()" class="text-gray-500 hover:text-red-500 text-sm">Smazat z knihovny</button>
-                    <button onclick="saveMovie()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded">ULOŽIT</button>
+                    <button onclick="saveMovie()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-8 rounded">ULOŽIT ZMĚNY</button>
                 </div>
             </div>
         </div>
@@ -146,6 +156,7 @@
         let tempSeriesId = null; 
         let currentSeasonData = null;
         let editingEpisode = null; // { s_idx, ep_idx, tmdb_data }
+        let editingMovieId = null;
 
         // --- START ---
         function init() {
@@ -182,7 +193,7 @@
                 } else {
                     alert("Chyba: Soubor database.json nenalezen!");
                 }
-            } catch (e) { console.error(e); alert("Nelze načíst data."); }
+            } catch (e) { console.error(e); alert("Nelze načíst data. Zkontroluj token."); }
             document.getElementById("loading").classList.add("hidden");
         }
 
@@ -227,8 +238,22 @@
                 const div = document.createElement("div");
                 div.className = "poster-card group";
                 div.onclick = () => currentTab === 'movies' ? openMovieEditor(item.id) : openSeriesManager(item.id);
+                
+                // Indikace u filmu, pokud má verzi/url
+                let hasContent = false;
+                if(currentTab === 'movies') {
+                    // Kontrola starého formátu (url) i nového (versions)
+                    hasContent = (item.url && item.url.length > 0) || (item.versions && item.versions.length > 0);
+                } else {
+                    // Pro seriály kontrola episodes_data
+                    hasContent = item.episodes_data && item.episodes_data.length > 0;
+                }
+
                 div.innerHTML = `
-                    <img src="${imgUrl}" class="rounded-md w-full h-auto object-cover shadow-lg group-hover:opacity-50 transition">
+                    <div class="relative">
+                        <img src="${imgUrl}" class="rounded-md w-full h-auto object-cover shadow-lg group-hover:opacity-50 transition ${hasContent ? 'border-b-4 border-green-600' : ''}">
+                        ${hasContent ? '<div class="absolute top-2 right-2 bg-green-600 text-white text-xs px-2 py-1 rounded shadow">HOTOWO</div>' : ''}
+                    </div>
                     <div class="hidden group-hover:flex absolute inset-0 flex-col items-center justify-center text-center p-2">
                         <span class="font-bold text-sm mb-2">${item.title || item.name}</span>
                         <i class="fas fa-pen text-red-600 text-2xl"></i>
@@ -313,15 +338,16 @@
             };
 
             if (currentTab === 'movies') {
-                newItem.url = ""; // Zatím prázdné
+                newItem.versions = []; // Nová struktura pro více verzí
+                // Pozn: stará položka 'url' se zde již nevytváří, ale logika pro čtení ji podporuje
                 db.movies.push(newItem);
                 closeModal('add-modal');
-                saveLibrary(); // Uložit strukturu
-                openMovieEditor(newItem.id); // Otevřít rovnou editor pro vložení URL
+                saveLibrary(); 
+                openMovieEditor(newItem.id); 
             } else {
                 // Pro seriály
                 newItem.seasons_count = details.number_of_seasons;
-                newItem.episodes_data = []; // Zde budeme ukládat URL epizod
+                newItem.episodes_data = [];
                 db.series.push(newItem);
                 closeModal('add-modal');
                 saveLibrary();
@@ -329,8 +355,7 @@
             }
         }
 
-        // --- EDITOR FILMŮ ---
-        let editingMovieId = null;
+        // --- EDITOR FILMŮ (MULTIPLE VERSIONS) ---
         function openMovieEditor(id) {
             const movie = db.movies.find(m => m.id === id);
             if(!movie) return;
@@ -339,29 +364,92 @@
             document.getElementById("edit-movie-title").innerText = movie.title;
             document.getElementById("edit-movie-year").innerText = `${movie.year} • ${movie.genres.join(", ")}`;
             document.getElementById("edit-movie-poster").src = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
-            document.getElementById("edit-movie-url").value = movie.url || "";
+            
+            // Vyčištění kontejneru
+            const container = document.getElementById("movie-versions-container");
+            container.innerHTML = "";
+
+            // LOGIKA KOMPATIBILITY:
+            // 1. Pokud existuje pole versions, použijeme ho.
+            // 2. Pokud neexistuje, ale existuje stará 'url', vytvoříme dočasnou verzi.
+            // 3. Pokud nic, začneme prázdným řádkem.
+
+            let versionsToRender = [];
+            
+            if (movie.versions && Array.isArray(movie.versions) && movie.versions.length > 0) {
+                versionsToRender = movie.versions;
+            } else if (movie.url) {
+                // Migrace starých dat za běhu
+                versionsToRender.push({ name: "Hlavní verze", url: movie.url });
+            } else {
+                // Úplně nový film bez dat, přidáme jeden prázdný řádek
+                versionsToRender.push({ name: "Hlavní verze", url: "" });
+            }
+
+            versionsToRender.forEach(v => {
+                addVersionRow(v.name, v.url);
+            });
             
             document.getElementById("movie-modal").classList.remove("hidden");
+        }
+
+        function addVersionRow(name = "Verze", url = "") {
+            const container = document.getElementById("movie-versions-container");
+            const div = document.createElement("div");
+            div.className = "version-row flex gap-2 items-center bg-gray-900 p-3 rounded border border-gray-700";
+            
+            div.innerHTML = `
+                <div class="flex-grow flex flex-col md:flex-row gap-2">
+                    <input type="text" class="ver-name bg-black border border-gray-600 text-white px-3 py-2 rounded w-full md:w-1/3 focus:border-red-600 focus:outline-none placeholder-gray-600" 
+                           placeholder="Název (např. Director's Cut)" value="${name}">
+                    <input type="text" class="ver-url bg-black border border-gray-600 text-white px-3 py-2 rounded w-full md:w-2/3 focus:border-red-600 focus:outline-none placeholder-gray-600" 
+                           placeholder="URL (http://...)" value="${url}">
+                </div>
+                <button onclick="this.closest('.version-row').remove()" class="text-gray-500 hover:text-red-500 p-2" title="Odstranit tuto verzi">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+            container.appendChild(div);
         }
 
         function saveMovie() {
             const movie = db.movies.find(m => m.id === editingMovieId);
             if(movie) {
-                movie.url = document.getElementById("edit-movie-url").value.trim();
+                // Sesbírat data ze všech řádků
+                const rows = document.querySelectorAll("#movie-versions-container .version-row");
+                const newVersions = [];
+                
+                rows.forEach(row => {
+                    const name = row.querySelector(".ver-name").value.trim();
+                    const url = row.querySelector(".ver-url").value.trim();
+                    
+                    if (url) { // Uložit jen pokud má URL (nebo název i URL)
+                        newVersions.push({
+                            name: name || "Neznámá verze",
+                            url: url
+                        });
+                    }
+                });
+
+                movie.versions = newVersions;
+                
+                // Vyčistit starou vlastnost 'url', aby se databáze vyčistila od duplicit
+                delete movie.url;
+
                 saveLibrary();
                 closeModal('movie-modal');
             }
         }
 
         function deleteMovie() {
-            if(confirm("Opravdu odstranit tento film?")) {
+            if(confirm("Opravdu odstranit tento film a všechny jeho verze?")) {
                 db.movies = db.movies.filter(m => m.id !== editingMovieId);
                 saveLibrary();
                 closeModal('movie-modal');
             }
         }
 
-        // --- MANAGER SERIÁLŮ (SLOŽITÉ) ---
+        // --- MANAGER SERIÁLŮ (Nezměněno, ale zachováno pro funkčnost) ---
         async function openSeriesManager(id) {
             tempSeriesId = id;
             const series = db.series.find(s => s.id === id);
@@ -369,17 +457,15 @@
             document.getElementById("series-title").innerText = series.title;
             document.getElementById("series-poster").src = `https://image.tmdb.org/t/p/w300${series.poster_path}`;
             
-            // Vygenerovat seznam sérií
             const seasonList = document.getElementById("seasons-list");
             seasonList.innerHTML = "";
             document.getElementById("episodes-list").innerHTML = "<div class='text-gray-500 text-center mt-10'>Vyber sérii vlevo</div>";
 
-            // Získat info o sériích z TMDB (znovu, pro jistotu počtu)
             const res = await fetch(`https://api.themoviedb.org/3/tv/${series.tmdb_id}?api_key=${TMDB_KEY}&language=cs-CZ`);
             const tmdbShow = await res.json();
 
             tmdbShow.seasons.forEach(season => {
-                if(season.season_number === 0 && season.episode_count === 0) return; // Přeskočit prázdné specials
+                if(season.season_number === 0 && season.episode_count === 0) return; 
                 
                 const btn = document.createElement("button");
                 btn.className = "w-full text-left px-4 py-3 bg-gray-900 hover:bg-gray-800 rounded mb-1 text-sm font-bold flex justify-between";
@@ -394,7 +480,6 @@
         async function loadEpisodes(tmdbId, seasonNum) {
             document.getElementById("episodes-list").innerHTML = "<i class='fas fa-spinner fa-spin'></i> Načítám epizody...";
             
-            // Stáhnout metadata epizod z TMDB
             const res = await fetch(`https://api.themoviedb.org/3/tv/${tmdbId}/season/${seasonNum}?api_key=${TMDB_KEY}&language=cs-CZ`);
             const data = await res.json();
             
@@ -405,8 +490,6 @@
             const series = db.series.find(s => s.id === tempSeriesId);
 
             data.episodes.forEach(ep => {
-                // Zkusit najít, jestli už máme uloženou URL pro tuto epizodu
-                // Ukládáme jako: "S1E1"
                 const epKey = `S${seasonNum}E${ep.episode_number}`;
                 const savedEp = series.episodes_data ? series.episodes_data.find(x => x.key === epKey) : null;
                 const hasUrl = savedEp && savedEp.url;
@@ -445,11 +528,8 @@
             if(!series.episodes_data) series.episodes_data = [];
 
             const epKey = `S${editingEpisode.season}E${editingEpisode.number}`;
-            
-            // Odstranit starý záznam
             series.episodes_data = series.episodes_data.filter(x => x.key !== epKey);
 
-            // Pokud URL není prázdná, přidat nový
             if(url) {
                 series.episodes_data.push({
                     key: epKey,
@@ -460,10 +540,8 @@
                 });
             }
 
-            saveLibrary(); // Uložit do Gistu
+            saveLibrary(); 
             document.getElementById("episode-editor").classList.add("hidden");
-            
-            // Refresh seznamu epizod (znovu načíst, aby se přebarvilo)
             loadEpisodes(series.tmdb_id, editingEpisode.season);
         }
 
