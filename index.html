@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kodi Admin 3.1</title>
+    <title>Kodi Admin 3.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -307,27 +307,29 @@
             
             const cont = document.getElementById("movie-versions-container"); cont.innerHTML = "";
             let versions = item.versions || [];
-            if(versions.length === 0 && item.url) versions.push({ name: "Hlavní verze", url: item.url, quality: item.quality || "" });
+            if(versions.length === 0 && item.url) versions.push({ name: "Hlavní verze", url: item.url, quality: item.quality || "", runtime: "" });
             
-            versions.forEach(v => addVersionRow(v.name, v.url, v.quality));
+            versions.forEach(v => addVersionRow(v.name, v.url, v.quality, v.runtime));
             document.getElementById("movie-modal").classList.remove("hidden");
         }
 
-        function addVersionRow(name="Verze", url="", quality="") {
+        // UPRAVENO: Přidán parametr runtime
+        function addVersionRow(name="Verze", url="", quality="", runtime="") {
             const div = document.createElement("div");
             div.className = "version-row flex gap-2 items-center bg-gray-900 p-2 rounded border border-gray-800";
-            // Přidán SELECT pro kvalitu verze
+            
             div.innerHTML = `
                 <div class="flex-grow flex flex-col gap-1">
                     <div class="flex gap-2">
-                        <input type="text" class="ver-name bg-black border border-gray-700 text-white text-xs px-2 py-1 rounded w-3/5" value="${name}" placeholder="Název (např. Director's Cut)">
-                        <select class="ver-quality bg-black border border-gray-700 text-white text-xs px-1 py-1 rounded w-2/5">
+                        <input type="text" class="ver-name bg-black border border-gray-700 text-white text-xs px-2 py-1 rounded w-3/6" value="${name}" placeholder="Název">
+                        <select class="ver-quality bg-black border border-gray-700 text-white text-xs px-1 py-1 rounded w-2/6">
                             <option value="" ${quality===""?'selected':''}>--</option>
                             <option value="4K" ${quality==="4K"?'selected':''}>4K</option>
                             <option value="1080p" ${quality==="1080p"?'selected':''}>1080p</option>
                             <option value="720p" ${quality==="720p"?'selected':''}>720p</option>
                             <option value="SD" ${quality==="SD"?'selected':''}>SD</option>
                         </select>
+                        <input type="number" class="ver-runtime bg-black border border-gray-700 text-white text-xs px-1 py-1 rounded w-1/6 text-center" value="${runtime}" placeholder="min">
                     </div>
                     <input type="text" class="ver-url bg-black border border-gray-700 text-white text-xs px-2 py-1 rounded w-full" value="${url}" placeholder="URL adresa">
                 </div>
@@ -346,7 +348,14 @@
                 const n = r.querySelector(".ver-name").value.trim();
                 const u = r.querySelector(".ver-url").value.trim();
                 const q = r.querySelector(".ver-quality").value;
-                if(u) item.versions.push({ name: n || "Verze", url: u, quality: q });
+                const rt = r.querySelector(".ver-runtime").value.trim(); // Načtení času
+                
+                if(u) item.versions.push({ 
+                    name: n || "Verze", 
+                    url: u, 
+                    quality: q, 
+                    runtime: rt ? parseInt(rt) : null 
+                });
             });
             delete item.url; 
             saveLibrary(); closeModal('movie-modal');
